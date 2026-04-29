@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NavInterna – Navegação de Ambientes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #273449;
+    --border: #334155;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --success: #22c55e;
+    --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 1.5rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .debug-toggle {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem; color: var(--muted);
+    background: none; border: 1px solid var(--border);
+    padding: 4px 12px; border-radius: 6px;
+    transition: all .2s;
+  }
+  .debug-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .debug-toggle.active { border-color: var(--warn); color: var(--warn); background: rgba(245,158,11,.08); }
+  .debug-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* ── LAYOUT ── */
+  .app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  aside {
+    width: 280px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 1.25rem 1.25rem 0.5rem;
+  }
+  .upload-area {
+    margin: 0 1rem 1rem;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: rgba(59,130,246,.06); }
+  .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { color: var(--muted); margin-bottom: 0.5rem; }
+  .upload-label { font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+  .upload-label strong { color: var(--accent); }
+  .upload-filename {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--success);
+    margin-top: 0.4rem;
+    word-break: break-all;
+  }
+
+  /* Select */
+  .select-wrapper { padding: 0 1rem 0.75rem; }
+  label.field-label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+  select, .select-styled {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+  option { background: var(--surface2); }
+
+  /* Info card */
+  .info-card {
+    margin: 0 1rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .info-card .card-title {
+    font-weight: 600; font-size: 0.78rem;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--muted); margin-bottom: 0.4rem;
+  }
+  .info-card .ref-tag {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: rgba(59,130,246,.12);
+    border: 1px solid rgba(59,130,246,.25);
+    color: var(--accent);
+    font-size: 0.75rem; font-weight: 500;
+    border-radius: 6px; padding: 2px 8px;
+    margin-bottom: 0.5rem;
+  }
+  .info-card p { color: #94a3b8; }
+
+  /* Navigate button */
+  .nav-btn {
+    margin: 0 1rem 1rem;
+    width: calc(100% - 2rem);
+    padding: 0.7rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 0.88rem; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    transition: opacity .2s, transform .1s;
+    box-shadow: 0 0 20px rgba(59,130,246,.3);
+  }
+  .nav-btn:hover { opacity: 0.9; }
+  .nav-btn:active { transform: scale(.98); }
+  .nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Debug panel */
+  .debug-panel {
+    margin: 0 1rem 1rem;
+    background: #0d1117;
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--warn);
+    display: none;
+  }
+  .debug-panel.visible { display: block; }
+  .debug-panel .debug-line { margin-bottom: 2px; }
+  .debug-panel .debug-coord { color: #e2e8f0; }
+
+  /* Route steps */
+  .steps-list { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .step-item {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    font-size: 0.8rem; color: #94a3b8;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 600; color: var(--muted);
+  }
+  .step-item.active .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step-item.active { color: var(--text); }
+
+  /* ── MAP AREA ── */
+  main {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background: var(--bg);
+    position: relative;
+  }
+  .map-container {
+    position: relative;
+    display: inline-block;
+    min-width: 100%;
+    min-height: 100%;
+  }
+  #map-placeholder {
+    width: 100%;
+    min-height: calc(100dvh - 56px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--muted);
+  }
+  .placeholder-icon { opacity: .3; }
+  .placeholder-text { font-size: 0.9rem; text-align: center; line-height: 1.6; }
+
+  #floor-img {
+    display: block;
+    max-width: none;
+    cursor: crosshair;
+    user-select: none;
+  }
+  #svg-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* SVG animations */
+  @keyframes dash {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes pulse-circle {
+    0%, 100% { opacity: 1; r: 10; }
+    50% { opacity: .5; r: 14; }
+  }
+  .route-path {
+    fill: none;
+    stroke: url(#routeGradient);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 6px rgba(59,130,246,.7));
+  }
+  .origin-pulse {
+    animation: pulse-circle 1.5s ease-in-out infinite;
+  }
+
+  /* Debug coords overlay */
+  #coords-overlay {
+    position: fixed;
+    bottom: 1.5rem; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(13,17,23,.92);
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 0.5rem 1.2rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--warn);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .25s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+  #coords-overlay.show { opacity: 1; }
+
+  /* Responsive sidebar collapse */
+  @media (max-width: 640px) {
+    aside { width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid var(--border); height: auto; max-height: 45dvh; }
+    .app-body { flex-direction: column; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    NavInterna
+  </div>
+  <span class="badge">v1.0</span>
+  <button class="debug-toggle" id="debugToggle" onclick="toggleDebug()">
+    <span class="debug-dot"></span>
+    Modo Debug
+  </button>
+</header>
+
+<!-- BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside>
+    <!-- Upload -->
+    <div class="section-title">Planta do Andar</div>
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" onchange="handleFile(event)" />
+      <div class="upload-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+      </div>
+      <div class="upload-label"><strong>Clique</strong> ou arraste a planta<br/>.jpg / .png</div>
+      <div class="upload-filename" id="uploadFilename"></div>
+    </div>
+
+    <!-- Origin -->
+    <div class="section-title">Ponto de Origem (QR Code)</div>
+    <div class="select-wrapper">
+      <label class="field-label">Selecione a Placa / QR Code</label>
+      <select id="originSelect" onchange="onOriginChange()">
+        <option value="">– Selecione –</option>
+      </select>
+    </div>
+
+    <!-- Info card origem -->
+    <div class="info-card" id="originCard" style="display:none">
+      <div class="card-title">📍 Você está aqui</div>
+      <div class="ref-tag" id="originRefTag"></div>
+      <p id="originInstruction"></p>
+    </div>
+
+    <!-- Destination -->
+    <div class="section-title">Destino</div>
+    <div class="select-wrapper">
+      <label class="field-label">Selecione a Sala / Local</label>
+      <select id="destSelect" onchange="onDestChange()">
+        <option value="">– Selecione –</option>
+      </select>
+    </div>
+
+    <!-- Info card destino -->
+    <div class="info-card" id="destCard" style="display:none">
+      <div class="card-title">🏁 Destino</div>
+      <p id="destInstruction" style="color:var(--text); font-weight:500;"></p>
+    </div>
+
+    <!-- Navigate -->
+    <button class="nav-btn" id="navBtn" onclick="drawRoute()" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+      </svg>
+      Traçar Rota
+    </button>
+
+    <!-- Route steps -->
+    <div class="section-title" id="stepsTitle" style="display:none">Instruções</div>
+    <div class="steps-list" id="stepsList"></div>
+
+    <!-- Debug panel -->
+    <div class="section-title" id="debugTitle" style="display:none">Debug – Coordenadas</div>
+    <div class="debug-panel" id="debugPanel">
+      <div class="debug-line">Clique na imagem para capturar</div>
+      <div class="debug-line">coordenadas X / Y</div>
+      <div class="debug-line" id="debugCoordLine" style="display:none">
+        → <span class="debug-coord" id="debugCoordValue"></span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- MAP -->
+  <main id="mapMain">
+    <div class="map-container" id="mapContainer">
+      <div id="map-placeholder">
+        <svg class="placeholder-icon" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <div class="placeholder-text">Carregue a planta do andar<br/>para começar a navegação</div>
+      </div>
+      <img id="floor-img" src="" alt="Planta" style="display:none" onload="onImageLoad()" />
+      <svg id="svg-overlay" style="display:none"></svg>
+    </div>
+  </main>
+
+</div>
+
+<!-- Debug coords floating -->
+<div id="coords-overlay"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  LOCATIONS — edite os valores X e Y usando o Modo Debug
+//  Estrutura: { id, name, x, y, type, ref?, instruction, steps? }
+// ══════════════════════════════════════════════════════════
+const LOCATIONS = {
+  // ── ORIGENS (QR Codes / Placas) ──────────────────────────
+  origins: [
+    {
+      id: "qr_recepcao",
+      name: "QR – Recepção Principal",
+      x: 120,
+      y: 200,
+      ref: "📶 Você está perto da Recepção",
+      instruction: "Você escaneou o QR Code da entrada principal. Selecione seu destino ao lado.",
+    },
+    {
+      id: "qr_elevador",
+      name: "QR – Elevador (Andar 2)",
+      x: 380,
+      y: 180,
+      ref: "🛗 Você está perto do Elevador",
+      instruction: "QR Code próximo ao hall do elevador. A escadaria fica à sua esquerda.",
+    },
+    {
+      id: "qr_cafe",
+      name: "QR – Área do Café",
+      x: 620,
+      y: 340,
+      ref: "☕ Você está perto do Café",
+      instruction: "QR Code na área de convivência. O corredor principal está à sua frente.",
+    },
+    {
+      id: "qr_banheiro",
+      name: "QR – Corredor Central",
+      x: 300,
+      y: 400,
+      ref: "🚪 Você está no Corredor Central",
+      instruction: "QR Code fixado na parede do corredor central. Todas as salas têm acesso a partir daqui.",
+    },
+  ],
+
+  // ── DESTINOS (Salas) ─────────────────────────────────────
+  destinations: [
+    {
+      id: "sala_reuniao_a",
+      name: "Sala de Reunião A",
+      x: 180,
+      y: 120,
+      instruction: "Sala de Reunião A – Capacidade 8 pessoas",
+      steps: [
+        "Vire à direita saindo do ponto de origem",
+        "Siga pelo corredor principal ~15m",
+        "A Sala A fica na primeira porta à esquerda",
+      ],
+    },
+    {
+      id: "sala_diretoria",
+      name: "Diretoria",
+      x: 540,
+      y: 120,
+      instruction: "Diretoria – Acesso restrito",
+      steps: [
+        "Siga em frente pelo corredor central",
+        "Vire à direita no cruzamento do elevador",
+        "A Diretoria é a última sala no corredor",
+      ],
+    },
+    {
+      id: "sala_ti",
+      name: "Sala de TI",
+      x: 660,
+      y: 260,
+      instruction: "Sala de TI – Suporte técnico",
+      steps: [
+        "Caminhe em direção ao corredor leste",
+        "Passe pelo café à esquerda",
+        "A Sala de TI fica após a curva, à direita",
+      ],
+    },
+    {
+      id: "sala_rh",
+      name: "RH – Recursos Humanos",
+      x: 200,
+      y: 460,
+      instruction: "RH – Recursos Humanos",
+      steps: [
+        "Siga pelo corredor sul",
+        "Passe pela impressora central",
+        "RH fica na segunda porta à esquerda",
+      ],
+    },
+    {
+      id: "sala_financeiro",
+      name: "Financeiro",
+      x: 460,
+      y: 480,
+      instruction: "Departamento Financeiro",
+      steps: [
+        "Vá até o corredor central",
+        "Siga em direção ao fundo do andar",
+        "O Financeiro fica ao final, porta azul",
+      ],
+    },
+  ],
+};
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let debugMode = false;
+let imageNaturalW = 0;
+let imageNaturalH = 0;
+let imageRenderedW = 0;
+let imageRenderedH = 0;
+let coordsTimeout = null;
+
+// ══════════════════════════════════════════════════════════
+//  INIT – populate selects
+// ══════════════════════════════════════════════════════════
+(function init() {
+  const originSel = document.getElementById('originSelect');
+  const destSel   = document.getElementById('destSelect');
+
+  LOCATIONS.origins.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.id;
+    opt.textContent = o.name;
+    originSel.appendChild(opt);
+  });
+
+  LOCATIONS.destinations.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    destSel.appendChild(opt);
+  });
+
+  // Drag-and-drop
+  const area = document.getElementById('uploadArea');
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag'); });
+  area.addEventListener('dragleave', () => area.classList.remove('drag'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) loadImageFile(file);
+  });
+})();
+
+// ══════════════════════════════════════════════════════════
+//  FILE UPLOAD
+// ══════════════════════════════════════════════════════════
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (file) loadImageFile(file);
+}
+
+function loadImageFile(file) {
+  if (!file.type.match(/image\/(jpeg|png)/)) {
+    alert('Por favor, envie um arquivo .jpg ou .png');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('floor-img');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('map-placeholder').style.display = 'none';
+    document.getElementById('svg-overlay').style.display = 'block';
+    document.getElementById('uploadFilename').textContent = '✓ ' + file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════════════════════
+//  IMAGE LOAD & RESIZE
+// ══════════════════════════════════════════════════════════
+function onImageLoad() {
+  const img = document.getElementById('floor-img');
+  imageNaturalW = img.naturalWidth;
+  imageNaturalH = img.naturalHeight;
+  updateSvgSize();
+  img.addEventListener('click', onMapClick);
+  window.addEventListener('resize', updateSvgSize);
+}
+
+function updateSvgSize() {
+  const img = document.getElementById('floor-img');
+  const svg = document.getElementById('svg-overlay');
+  imageRenderedW = img.offsetWidth;
+  imageRenderedH = img.offsetHeight;
+  svg.setAttribute('width', imageRenderedW);
+  svg.setAttribute('height', imageRenderedH);
+  svg.setAttribute('viewBox', `0 0 ${imageRenderedW} ${imageRenderedH}`);
+}
+
+// ══════════════════════════════════════════════════════════
+//  COORDINATE SCALING
+// ══════════════════════════════════════════════════════════
+function toRendered(x, y) {
+  const scaleX = imageRenderedW / imageNaturalW;
+  const scaleY = imageRenderedH / imageNaturalH;
+  return { x: x * scaleX, y: y * scaleY };
+}
+
+// ══════════════════════════════════════════════════════════
+//  DEBUG MODE
+// ══════════════════════════════════════════════════════════
+function toggleDebug() {
+  debugMode = !debugMode;
+  const btn   = document.getElementById('debugToggle');
+  const panel = document.getElementById('debugPanel');
+  const title = document.getElementById('debugTitle');
+
+  btn.classList.toggle('active', debugMode);
+  panel.classList.toggle('visible', debugMode);
+  title.style.display = debugMode ? 'block' : 'none';
+
+  const img = document.getElementById('floor-img');
+  img.style.cursor = debugMode ? 'crosshair' : 'default';
+  console.log(`%c[NavInterna] Modo Debug: ${debugMode ? 'ATIVADO' : 'DESATIVADO'}`, 'color:#f59e0b;font-weight:bold;');
+}
+
+function onMapClick(e) {
+  if (!debugMode) return;
+  const img = document.getElementById('floor-img');
+  const rect = img.getBoundingClientRect();
+
+  const renderedX = e.clientX - rect.left;
+  const renderedY = e.clientY - rect.top;
+
+  // Convert to natural (source) coordinates
+  const scaleX = imageNaturalW / imageRenderedW;
+  const scaleY = imageNaturalH / imageRenderedH;
+  const natX = Math.round(renderedX * scaleX);
+  const natY = Math.round(renderedY * scaleY);
+
+  const coord = `{ x: ${natX}, y: ${natY} }`;
+  console.log(`%c[Debug Click] ${coord}`, 'color:#f59e0b;font-family:monospace;');
+
+  // Update debug panel
+  document.getElementById('debugCoordLine').style.display = 'block';
+  document.getElementById('debugCoordValue').textContent = coord;
+
+  // Show floating overlay
+  const overlay = document.getElementById('coords-overlay');
+  overlay.textContent = `🎯 x: ${natX}  y: ${natY}  (natural)   rx: ${Math.round(renderedX)}  ry: ${Math.round(renderedY)} (rendered)`;
+  overlay.classList.add('show');
+
+  clearTimeout(coordsTimeout);
+  coordsTimeout = setTimeout(() => overlay.classList.remove('show'), 3000);
+
+  // Draw a small dot where clicked
+  drawDebugDot(renderedX, renderedY, natX, natY);
+}
+
+function drawDebugDot(rx, ry, nx, ny) {
+  const svg = document.getElementById('svg-overlay');
+  // Remove previous debug dots
+  svg.querySelectorAll('.debug-dot-el').forEach(el => el.remove());
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.classList.add('debug-dot-el');
+
+  const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  c.setAttribute('cx', rx);
+  c.setAttribute('cy', ry);
+  c.setAttribute('r', '6');
+  c.setAttribute('fill', 'rgba(245,158,11,0.25)');
+  c.setAttribute('stroke', '#f59e0b');
+  c.setAttribute('stroke-width', '2');
+
+  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t.setAttribute('x', rx + 10);
+  t.setAttribute('y', ry - 8);
+  t.setAttribute('fill', '#f59e0b');
+  t.setAttribute('font-size', '11');
+  t.setAttribute('font-family', 'DM Mono, monospace');
+  t.textContent = `${nx}, ${ny}`;
+
+  g.appendChild(c);
+  g.appendChild(t);
+  svg.appendChild(g);
+}
+
+// ══════════════════════════════════════════════════════════
+//  ORIGIN / DESTINATION CHANGE
+// ══════════════════════════════════════════════════════════
+function onOriginChange() {
+  const id = document.getElementById('originSelect').value;
+  const card = document.getElementById('originCard');
+  if (!id) { card.style.display = 'none'; checkNavBtn(); return; }
+
+  const loc = LOCATIONS.origins.find(o => o.id === id);
+  document.getElementById('originRefTag').textContent = loc.ref;
+  document.getElementById('originInstruction').textContent = loc.instruction;
+  card.style.display = 'block';
+  checkNavBtn();
+  clearRoute();
+}
+
+function onDestChange() {
+  const id = document.getElementById('destSelect').value;
+  const card = document.getElementById('destCard');
+  if (!id) { card.style.display = 'none'; checkNavBtn(); return; }
+
+  const loc = LOCATIONS.destinations.find(d => d.id === id);
+  document.getElementById('destInstruction').textContent = loc.instruction;
+  card.style.display = 'block';
+  checkNavBtn();
+  clearRoute();
+}
+
+function checkNavBtn() {
+  const o = document.getElementById('originSelect').value;
+  const d = document.getElementById('destSelect').value;
+  const img = document.getElementById('floor-img');
+  document.getElementById('navBtn').disabled = !(o && d && img.style.display !== 'none');
+}
+
+// ══════════════════════════════════════════════════════════
+//  ROUTE DRAWING
+// ══════════════════════════════════════════════════════════
+function clearRoute() {
+  const svg = document.getElementById('svg-overlay');
+  svg.querySelectorAll('.route-el').forEach(el => el.remove());
+  document.getElementById('stepsList').innerHTML = '';
+  document.getElementById('stepsTitle').style.display = 'none';
+}
+
+function drawRoute() {
+  clearRoute();
+
+  const originId = document.getElementById('originSelect').value;
+  const destId   = document.getElementById('destSelect').value;
+  if (!originId || !destId) return;
+
+  const origin = LOCATIONS.origins.find(o => o.id === originId);
+  const dest   = LOCATIONS.destinations.find(d => d.id === destId);
+
+  updateSvgSize();
+  const svg = document.getElementById('svg-overlay');
+
+  // ── Gradient def ──
+  if (!svg.querySelector('#routeGradient')) {
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `
+      <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#06b6d4"/>
+      </linearGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    `;
+    svg.prepend(defs);
+  }
+
+  const o = toRendered(origin.x, origin.y);
+  const d = toRendered(dest.x, dest.y);
+
+  // Bezier midpoint
+  const midX = (o.x + d.x) / 2;
+  const midY = Math.min(o.y, d.y) - Math.abs(d.x - o.x) * 0.3;
+
+  const pathD = `M ${o.x} ${o.y} Q ${midX} ${midY} ${d.x} ${d.y}`;
+
+  // ── Route path ──
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', pathD);
+  path.setAttribute('class', 'route-path route-el');
+  path.setAttribute('stroke-dasharray', '9999');
+  path.setAttribute('stroke-dashoffset', '9999');
+  path.style.animation = 'dash 1.4s ease forwards';
+  svg.appendChild(path);
+
+  // ── Arrow along path ──
+  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  marker.innerHTML = `<marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 Z" fill="#06b6d4"/>
+  </marker>`;
+  svg.prepend(marker);
+  path.setAttribute('marker-end', 'url(#arrowhead)');
+
+  // ── Origin circle (pulsing) ──
+  const originG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  originG.classList.add('route-el');
+
+  const oPulse = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  oPulse.setAttribute('cx', o.x); oPulse.setAttribute('cy', o.y);
+  oPulse.setAttribute('r', '10'); oPulse.setAttribute('fill', 'rgba(59,130,246,0.2)');
+  oPulse.setAttribute('class', 'origin-pulse');
+
+  const oCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  oCircle.setAttribute('cx', o.x); oCircle.setAttribute('cy', o.y);
+  oCircle.setAttribute('r', '6'); oCircle.setAttribute('fill', '#3b82f6');
+  oCircle.setAttribute('stroke', '#fff'); oCircle.setAttribute('stroke-width', '2');
+
+  const oLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  oLabel.setAttribute('x', o.x); oLabel.setAttribute('y', o.y - 16);
+  oLabel.setAttribute('text-anchor', 'middle');
+  oLabel.setAttribute('fill', '#3b82f6');
+  oLabel.setAttribute('font-size', '11');
+  oLabel.setAttribute('font-family', 'DM Sans, sans-serif');
+  oLabel.setAttribute('font-weight', '600');
+  oLabel.textContent = 'VOCÊ';
+
+  originG.appendChild(oPulse);
+  originG.appendChild(oCircle);
+  originG.appendChild(oLabel);
+  svg.appendChild(originG);
+
+  // ── Destination circle ──
+  const destG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  destG.classList.add('route-el');
+
+  const dCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dCircle.setAttribute('cx', d.x); dCircle.setAttribute('cy', d.y);
+  dCircle.setAttribute('r', '8'); dCircle.setAttribute('fill', '#22c55e');
+  dCircle.setAttribute('stroke', '#fff'); dCircle.setAttribute('stroke-width', '2.5');
+
+  const dLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  dLabel.setAttribute('x', d.x); dLabel.setAttribute('y', d.y - 16);
+  dLabel.setAttribute('text-anchor', 'middle');
+  dLabel.setAttribute('fill', '#22c55e');
+  dLabel.setAttribute('font-size', '11');
+  dLabel.setAttribute('font-family', 'DM Sans, sans-serif');
+  dLabel.setAttribute('font-weight', '600');
+  dLabel.textContent = dest.name.toUpperCase();
+
+  // pin icon via text (flag)
+  const dIcon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  dIcon.setAttribute('x', d.x); dIcon.setAttribute('y', d.y + 4);
+  dIcon.setAttribute('text-anchor', 'middle');
+  dIcon.setAttribute('font-size', '8');
+  dIcon.setAttribute('fill', '#fff');
+  dIcon.textContent = '★';
+
+  destG.appendChild(dCircle);
+  destG.appendChild(dIcon);
+  destG.appendChild(dLabel);
+  svg.appendChild(destG);
+
+  // ── Steps ──
+  const stepsContainer = document.getElementById('stepsList');
+  const stepsTitle = document.getElementById('stepsTitle');
+  stepsContainer.innerHTML = '';
+  stepsTitle.style.display = 'block';
+
+  (dest.steps || ['Siga a rota indicada no mapa.']).forEach((step, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-item' + (i === 0 ? ' active' : '');
+    div.innerHTML = `<div class="step-num">${i + 1}</div><div>${step}</div>`;
+    stepsContainer.appendChild(div);
+  });
+
+  // ── Scroll map to show route ──
+  const mapMain = document.getElementById('mapMain');
+  const avgX = (o.x + d.x) / 2 - mapMain.offsetWidth / 2;
+  const avgY = (o.y + d.y) / 2 - mapMain.offsetHeight / 2;
+  mapMain.scrollTo({ left: Math.max(0, avgX), top: Math.max(0, avgY), behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
